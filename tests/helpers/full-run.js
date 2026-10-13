@@ -19,6 +19,7 @@ export function simulate(sect,seed){let r=applyAction(createRun(seed),{type:'STA
  if(r.battle)a=bestAction(r);
  else if(r.stage==='reward')a={type:'CHOOSE_REWARD',cardId:r.history.length===1?SECTS[sect].core:SECTS[sect].ultimate};
  else if(r.stage==='event')a={type:'CHOOSE_EVENT',kind:'upgrade',uid:r.deck.find(c=>c.cardId==='roll').uid};
+ else if(r.stage==='dream-event')a={type:'DREAM_EVENT',choice:'leave'};
  else a={type:'CONTINUE'};
  const n=applyAction(r,a);assert.notEqual(n,r,JSON.stringify(a));r=n;saveRun(storage,r);assert.deepEqual(loadRun(storage),{run:r,error:null});
  }

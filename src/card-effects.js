@@ -1,4 +1,4 @@
-import {CARDS} from './cards.js?v=20261013-sects1';
+import {CARDS} from './cards.js?v=20261013-events1';
 export function cardPreview(state,instance){
  const d=CARDS[instance.cardId];if(!d)return {cost:0,canPlay:false,reason:'未知卡牌',targetMode:'none'};
  const value=k=>instance.upgraded&&d.upgraded?.[k]!==undefined?d.upgraded[k]:d[k]||0;

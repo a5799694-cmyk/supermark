@@ -1,9 +1,11 @@
-import {CARDS} from './cards.js?v=20261013-sects1';
-import {ENEMIES} from './enemies.js?v=20261013-sects1';
-import {SECTS} from './sects.js?v=20261013-sects1';
-import {cardPreview} from './card-effects.js?v=20261013-sects1';
+import {CARDS} from './cards.js?v=20261013-events1';
+import {ENEMIES} from './enemies.js?v=20261013-events1';
+import {SECTS} from './sects.js?v=20261013-events1';
+import {cardPreview} from './card-effects.js?v=20261013-events1';
+import {EVENT_COPY,eventLife,canReplace} from './events.js?v=20261013-events1';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const button=(label,action,cls='primary')=>`<button class="${cls}" data-action='${esc(JSON.stringify(action))}'>${label}</button>`;
+const dreamButton=(label,choice,extra={},disabled=false)=>`<button class="primary" data-action='${esc(JSON.stringify({type:'DREAM_EVENT',choice,...extra}))}' ${disabled?'disabled':''}>${label}</button>`;
 export function cardText(c,state){
  const d=CARDS[c.cardId],p=cardPreview(state,c);let text='';
  const attack=p.hits>1||d.id==='clone-ultimate'?`${p.damage}×${p.hits}伤害`:`${p.damage}伤害`;
@@ -46,6 +48,23 @@ function battleView(run,ui){
 }
 function rewardView(run){return `<section class="scene"><h2>拣招开打</h2><p>功法拣好，老细放倒。</p><div class="reward-list">${run.rewards.map(id=>{const d=CARDS[id];return `<button class="reward" data-action='${esc(JSON.stringify({type:'CHOOSE_REWARD',cardId:id}))}'><b>${d.ultimate?'【大招】':''}${esc(d.name)} · ${d.cost}灵力</b><small>${esc(cardText({cardId:id,upgraded:false}))}</small></button>`;}).join('')}</div>${button('唔要',{type:'CHOOSE_REWARD',cardId:null},'ghost')}</section>`;}
 function eventView(run,ui){const pending=ui.pendingAction&&run.deck.find(c=>c.uid===ui.pendingAction.uid);return `<section class="scene"><h2>炒牌大会</h2><p>废牌删开，好牌改帅。</p><small>删一张牌，或强化一张通用牌。</small>${pending?`<div class="inspect"><b>确认${ui.pendingAction.kind==='delete'?'删除':'强化'}「${esc(CARDS[pending.cardId].name)}」？</b><p>${esc(cardText({...pending,upgraded:ui.pendingAction.kind==='upgrade'||pending.upgraded}))}</p><button class="ghost" data-confirm-event>确认</button><button class="ghost" data-cancel-event>取消</button></div>`:''}<div class="reward-list">${run.deck.map(c=>`<div class="event-card"><div><b>${esc(CARDS[c.cardId].name)}${c.upgraded?' ＋':''}</b><small>${esc(cardText(c))}</small></div><span><button class="ghost" data-event='${esc(JSON.stringify({type:'CHOOSE_EVENT',kind:'delete',uid:c.uid}))}' ${run.deck.length<=5||CARDS[c.cardId].type==='attack'&&run.deck.filter(x=>CARDS[x.cardId].type==='attack').length===1?'disabled':''}>删除</button>${CARDS[c.cardId].upgraded&&!c.upgraded?`<button class="primary" data-event='${esc(JSON.stringify({type:'CHOOSE_EVENT',kind:'upgrade',uid:c.uid}))}'>强化</button>`:''}</span></div>`).join('')}</div></section>`;}
+function dreamEventView(run){
+ const e=run.adventure.current,copy=EVENT_COPY[e.kind],cost=eventLife(10);
+ const cardDetail=c=>`<b>${esc(CARDS[c.cardId].name)}${c.upgraded?' ＋':''} · ${CARDS[c.cardId].cost}灵力</b><small>${esc(cardText(c))}</small>`;
+ const offered=choice=>`<div class="reward-list">${e.offers.map(id=>`<div class="event-card"><div>${cardDetail({cardId:id,upgraded:false})}</div>${dreamButton(choice==='replace'?'确认换入':`支付${cost}生命，拿走`,choice,{cardId:id},choice==='replace'?!canReplace(run,id):run.hp<=cost)}</div>`).join('')}</div>`;
+ let body='';
+ if(e.kind==='cat'){
+  const source=run.deck.find(c=>c.uid===e.selectedUid);
+  body='<p>免费换牌一次：旧牌换新牌，原有强化不会保留。牌组至少保留一张攻击牌。</p>';
+  if(source)body+=`<div class="inspect">正在换出：${cardDetail(source)}</div>${offered('replace')}${dreamButton('取消，重新选牌','cancel')}`;
+  else body+=`<p>先选要换出的牌，再看三张候选；不满意可取消。</p><div class="reward-list">${run.deck.map(c=>`<div class="event-card"><div>${cardDetail(c)}</div>${dreamButton('选择换出','select',{uid:c.uid})}</div>`).join('')}</div>`;
+ }else if(e.kind==='rest'){
+  body=`<p>静音休息：恢复${eventLife(20)}生命，最多回到40。或强化一张通用牌，二选一。</p>${dreamButton(`消息静音，恢复${eventLife(20)}生命`,'heal')}<div class="reward-list">${run.deck.map(c=>`<div class="event-card"><div>${cardDetail(c)}${CARDS[c.cardId].upgraded&&!c.upgraded?`<small>强化后：${esc(cardText({...c,upgraded:true}))}</small>`:''}</div>${dreamButton('边回边练，强化这张','upgrade',{uid:c.uid},c.upgraded||!CARDS[c.cardId].upgraded)}</div>`).join('')}</div>`;
+ }else{
+  body=`<p>${e.kind==='work'?`准点收工恢复${eventLife(10)}生命；接急单支付${cost}生命，从以下三张牌中选一张。`:`先看功法：支付${cost}生命，获得以下这张牌。`}支付后至少剩1生命。</p>${run.hp<=cost?'<p class="life-cost">生命不足：支付后须至少剩1生命。</p>':''}${e.kind==='work'?dreamButton(`准点收工，恢复${eventLife(10)}生命`,'heal'):''}${offered('take')}`;
+ }
+ return `<section class="scene dream-event"><small>梦中偶遇 · 生命 ${run.hp}/40</small><h2>${copy.title}</h2><p>${copy.line}</p><p>${copy.text}</p>${body}${button('离开，继续赶路',{type:'DREAM_EVENT',choice:'leave'},'ghost')}</section>`;
+}
 export function render(root,run,ui,dispatch){
  let content='';
  if(ui.recoveryRequired)content=`<section class="scene"><h2>存档需要处理</h2><p>${esc(ui.storageError)}</p><p>原存档不会被自动覆盖，确认后清除并重开。</p><button class="primary" data-recover>清除并重新开始</button></section>`;
@@ -53,10 +72,11 @@ export function render(root,run,ui,dispatch){
  else if(['battle','boss'].includes(run.stage))content=battleView(run,ui);
  else if(run.stage==='reward')content=rewardView(run);
  else if(run.stage==='event')content=eventView(run,ui);
+ else if(run.stage==='dream-event')content=dreamEventView(run);
  else if(run.stage==='second-ready')content=`<section class="scene"><h2>又要开会</h2><p>一人讲完，两人加班。</p>${button('继续排队',{type:'CONTINUE'})}</section>`;
  else if(run.stage==='boss-ready')content=`<section class="scene"><h2>老细驾到</h2><p>画饼唔食，雷劈剑劈。</p>${button('面见审批官',{type:'CONTINUE'})}</section>`;
  else content=`<section class="scene result"><h1>${run.result==='won'?'散水成功':'惨遭炒鱿'}</h1><p>${run.result==='won'?'飞升唔加薪，散水做仙人。':'炒鱿冇赔偿，瞓醒再开场。'}</p>${run.souvenir?`<div class="souvenir">纪念品：${esc(run.souvenir)}</div>`:''}${button('唔服，再嚟',{type:'RESTART',seed:(Date.now()&0xffffffff)>>>0})}</section>`;
- root.innerHTML=`<div class="game-shell">${ui.storageError&&!ui.recoveryRequired?`<div class="warning">${esc(ui.storageError)}</div>`:''}${content}<footer>梦里修仙 · 三门派版 v0.2 · 20261013</footer></div>`;
+ root.innerHTML=`<div class="game-shell">${ui.storageError&&!ui.recoveryRequired?`<div class="warning">${esc(ui.storageError)}</div>`:''}${content}<footer>梦里修仙 · 三门派版 v0.3 · 随机奇遇 · 20261013</footer></div>`;
  const redraw=()=>render(root,run,ui,dispatch);
  root.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',()=>dispatch(JSON.parse(el.dataset.action))));
  root.querySelectorAll('[data-sect]').forEach(el=>el.addEventListener('click',()=>{ui.selectedSectId=el.dataset.sect;redraw();}));

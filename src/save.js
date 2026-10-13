@@ -1,16 +1,18 @@
-import {CARDS} from './cards.js?v=20261013-sects1';
-import {ENEMIES} from './enemies.js?v=20261013-sects1';
-import {SECTS} from './sects.js?v=20261013-sects1';
+import {CARDS} from './cards.js?v=20261013-events1';
+import {ENEMIES} from './enemies.js?v=20261013-events1';
+import {SECTS} from './sects.js?v=20261013-events1';
+import {validAdventure} from './events.js?v=20261013-events1';
 export const SAVE_KEY='dream-cultivation-v1';
-const stages=new Set(['intro','battle','reward','event','second-ready','boss-ready','boss','result']);
+const stages=new Set(['intro','battle','reward','event','dream-event','second-ready','boss-ready','boss','result']);
 const int=(x,min=0,max=Number.MAX_SAFE_INTEGER)=>Number.isSafeInteger(x)&&x>=min&&x<=max;
 const known=(obj,keys)=>obj&&typeof obj==='object'&&!Array.isArray(obj)&&Object.keys(obj).every(k=>keys.includes(k));
 const validCards=cards=>Array.isArray(cards)&&cards.every(c=>known(c,['uid','cardId','upgraded'])&&CARDS[c.cardId]&&typeof c.uid==='string'&&c.uid.length>0&&typeof c.upgraded==='boolean'&&(!c.upgraded||Boolean(CARDS[c.cardId].upgraded)))&&new Set(cards.map(c=>c.uid)).size===cards.length;
 function validate(run,old=false){
- if(!known(run,['version','sectId','rewardSeen','stage','deck','hp','battle','seed','rewards','route','history','souvenir','result','nextUid'])||run.version!==(old?1:2)||!stages.has(run.stage))return false;
+ if(!known(run,['version','sectId','rewardSeen','adventure','stage','deck','hp','battle','seed','rewards','route','history','souvenir','result','nextUid'])||run.version!==(old?1:2)||!stages.has(run.stage))return false;
  if(!int(run.hp,0,40)||!int(run.seed,0,0xffffffff)||!int(run.nextUid,1)||!validCards(run.deck)||run.deck.length<5)return false;
  if(run.deck.some(c=>/^c[0-9]+$/.test(c.uid)&&Number(c.uid.slice(1))>=run.nextUid))return false;
  if(!Array.isArray(run.rewards)||run.rewards.some(id=>!CARDS[id])||new Set(run.rewards).size!==run.rewards.length||!Array.isArray(run.history)||run.history.some(k=>!['first','second','boss'].includes(k)))return false;
+ if(!validAdventure(run))return false;
  if(![null,'clone','counter'].includes(run.route)||![null,'won','lost'].includes(run.result)||(run.souvenir!==null&&typeof run.souvenir!=='string'))return false;
  if(!old){
   if(![null,'legacy',...Object.keys(SECTS)].includes(run.sectId)||(!run.sectId&&run.stage!=='intro'&&run.stage!=='result'))return false;

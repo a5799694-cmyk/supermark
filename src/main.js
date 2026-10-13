@@ -1,6 +1,6 @@
-import { createRun, applyAction } from './run.js?v=20261013-sects1';
-import { loadRun, saveRun } from './save.js?v=20261013-sects1';
-import { render } from './view.js?v=20261013-sects1';
+import { createRun, applyAction } from './run.js?v=20261013-events1';
+import { loadRun, saveRun } from './save.js?v=20261013-events1';
+import { render } from './view.js?v=20261013-events1';
 
 export function createDispatcher({getRun,setRun,apply=applyAction,save,render:draw}) {
   let locked=false;

@@ -1,13 +1,14 @@
-import { STARTER_IDS, CARDS, createCardInstance } from './cards.js?v=20261013-sects1';
-import { createBattle, playCard, endTurn } from './battle.js?v=20261013-sects1';
-import {SECTS,createStarterDeck} from './sects.js?v=20261013-sects1';
-import { shuffle } from './random.js?v=20261013-sects1';
+import { STARTER_IDS, CARDS, createCardInstance } from './cards.js?v=20261013-events1';
+import { createBattle, playCard, endTurn } from './battle.js?v=20261013-events1';
+import {SECTS,createStarterDeck} from './sects.js?v=20261013-events1';
+import { shuffle } from './random.js?v=20261013-events1';
+import {createAdventure,advanceEncounter,resolveEncounter} from './events.js?v=20261013-events1';
 
 const makeDeck=()=>STARTER_IDS.map((id,i)=>createCardInstance(id,`c${i+1}`));
 const copy=value=>structuredClone(value);
 
 export function createRun(seed=Date.now(),profile={}) {
-  return {version:2,sectId:null,rewardSeen:[],stage:'intro',deck:makeDeck(),hp:40,battle:null,seed:seed>>>0,rewards:[],route:null,history:[],souvenir:profile.souvenir||null,result:null,nextUid:7};
+  return {version:2,sectId:null,rewardSeen:[],adventure:createAdventure(seed),stage:'intro',deck:makeDeck(),hp:40,battle:null,seed:seed>>>0,rewards:[],route:null,history:[],souvenir:profile.souvenir||null,result:null,nextUid:7};
 }
 
 function beginBattle(run,kind) {
@@ -47,6 +48,7 @@ function afterBattle(run) {
 }
 
 export function applyAction(input,action) {
+  if(input.stage==='dream-event')return resolveEncounter(input,action);
   if(action.type==='RESTART' && input.stage==='result') return createRun(action.seed,{souvenir:input.souvenir});
   const run=copy(input);
   if(action.type==='START' && input.stage==='intro') {
@@ -59,7 +61,9 @@ export function applyAction(input,action) {
     if(action.cardId!==null && !run.rewards.includes(action.cardId)) return input;
     if(action.cardId) { run.deck.push(createCardInstance(action.cardId,`c${run.nextUid++}`)); if(!run.route) run.route=CARDS[action.cardId].route||null; }
     run.rewards=[]; const wins=run.history.filter(x=>['first','second'].includes(x)).length;
-    run.stage=wins===1?'event':'boss-ready'; return run;
+    if(run.adventure&&run.sectId!=='legacy'){
+      run.adventure.gap=wins-1;run.adventure.cursor=0;advanceEncounter(run);
+    }else run.stage=wins===1?'event':'boss-ready'; return run;
   } else if(input.stage==='event' && action.type==='CHOOSE_EVENT') {
     const index=run.deck.findIndex(c=>c.uid===action.uid); if(index<0) return input;
     if(action.kind==='delete') { if(run.deck.length<=5) return input; const remaining=run.deck.filter((_,i)=>i!==index); if(!remaining.some(c=>CARDS[c.cardId].type==='attack')) return input; run.deck=remaining; }
