@@ -23,7 +23,7 @@ def main():
     if server is None:
         raise RuntimeError('Ports 8023–8042 are busy; close an old game server and try again.')
     url = f'http://127.0.0.1:{port}/'
-    print(f'梦里修仙 · 三门派版 v0.2\n{url}\n保持窗口打开；Ctrl+C停止。', flush=True)
+    print(f'梦里修仙 · 三门派版 v0.3 · 随机奇遇\n{url}\n保持窗口打开；Ctrl+C停止。', flush=True)
     webbrowser.open(url)
     try:
         server.serve_forever()

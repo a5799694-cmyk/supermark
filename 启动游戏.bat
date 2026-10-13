@@ -1,13 +1,15 @@
 @echo off
-chcp 65001 >nul
+setlocal
 cd /d "%~dp0"
 where py >nul 2>nul
-if not errorlevel 1 (
-    py start_game.py
-) else (
-    python start_game.py
-)
-if errorlevel 1 (
-    echo 启动失败，请安装 Python 3 后再试。
-    pause
-)
+if errorlevel 1 goto use_python
+py -3 "%~dp0start_game.py"
+goto finished
+:use_python
+python "%~dp0start_game.py"
+:finished
+if not errorlevel 1 goto done
+echo Game failed to start. Run: py -3 start_game.py
+pause
+:done
+endlocal
