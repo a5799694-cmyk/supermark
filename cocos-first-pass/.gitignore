@@ -1,0 +1,7 @@
+Library/
+library/
+temp/
+Temp/
+build/
+profiles/
+node_modules/

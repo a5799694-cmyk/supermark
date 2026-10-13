@@ -61,3 +61,9 @@ GitHub开发分支：https://github.com/a5799694-cmyk/supermark/tree/feature/dre
 启动游戏.bat采用ASCII文字和Windows CRLF换行，显式用py -3执行带引号的完整脚本路径；没有py时回退python。修复启动时命令被截断并误入Python交互界面的问题。已经检查文件字节并验证本地HTTP服务及游戏模块返回正常；本环境不能执行Windows cmd，因此Windows端仍需复试。
 
 手动备用方式：在游戏文件夹地址栏输入cmd，回车后运行py -3 start_game.py。若看到>>>，先输入exit()退出Python交互界面。
+
+## Cocos首轮工程（2026-10-13）
+
+新增cocos-first-pass/可导入工程，使用Creator 3.8.8。首轮选门派→第一战→奖励，原生竖屏占位UI，内存进度、刷新重开，浏览器存档不受影响。打开步骤见cocos-first-pass/README.md。
+
+根目录npm ci后npm test共78项自动检查；npm run test:cocos检查迁移17项。官方3.8.8类型编译与项目引用检查通过，真实Creator导入/编译和交互仍待用户验收，见cocos-first-pass/VALIDATION.md。

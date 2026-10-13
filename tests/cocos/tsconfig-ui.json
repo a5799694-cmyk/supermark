@@ -1,0 +1,4 @@
+{
+ "compilerOptions":{"target":"ES2019","module":"ESNext","moduleResolution":"Node","strict":false,"skipLibCheck":true,"noEmit":true,"experimentalDecorators":true,"useDefineForClassFields":false,"types":["@cocos/creator-types/engine"],"lib":["ES2020","DOM"]},
+ "include":["../../cocos-first-pass/assets/**/*.ts"]
+}

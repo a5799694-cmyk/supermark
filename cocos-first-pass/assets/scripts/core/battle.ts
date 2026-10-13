@@ -1,0 +1,96 @@
+// Ported from browser src/battle.js; parity-tested; do not tune values here alone.
+import {BattleState,CardInstance} from './types';
+import {cloneState} from './clone-state';
+import { CARDS } from './cards';
+import { ENEMIES } from './enemies';
+import { cardPreview } from './card-effects';
+import { shuffle } from './random';
+
+const cap = (value,max) => Math.max(0,Math.min(max,value));
+const clone = cloneState;
+const log = (state,message) => { state.log = [...state.log,message].slice(-30); };
+
+function drawCards(state:BattleState,count:number) {
+  for (let n=0;n<count;n++) {
+    if (!state.draw.length && state.discard.length) {
+      const mixed=shuffle(state.discard,state.seed); state.draw=mixed.items; state.seed=mixed.seed; state.discard=[];
+    }
+    if (!state.draw.length) break;
+    state.hand.push(state.draw.shift());
+  }
+}
+
+export function createBattle(deck:CardInstance[],hp:number,enemyIds:string[],seed:number,sectId='legacy'):BattleState {
+  const mixed=shuffle(deck,seed);
+  const state:BattleState={sectId,attacksPlayed:0,thunderTriggered:false,hp,maxHp:40,energy:3,shield:0,rage:0,clones:sectId==='clone'?1:0,hand:[],draw:mixed.items,discard:[],exile:[],
+    enemies:enemyIds.map((type,i)=>{const d=ENEMIES[type]; if(!d) throw new Error(`Unknown enemy: ${type}`); return {id:`e${i}`,type,name:d.name,hp:d.hp,shield:0,actionIndex:d.start||0};}),
+    turn:1,seed:mixed.seed,status:'playing',effects:{nextAttackCloneBonus:0,nextAttackBonus:0,nextAttackDiscount:0,shieldRage:false,counterRage:false},log:[]};
+  drawCards(state,4); return state;
+}
+
+function hitEnemy(state:BattleState,targetId:string,damage:number) {
+  const target=state.enemies.find(e=>e.id===targetId && e.hp>0); if(!target) return false;
+  const absorbed=Math.min(target.shield,damage); target.shield-=absorbed; target.hp=Math.max(0,target.hp-(damage-absorbed));
+  if(state.enemies.every(e=>e.hp<=0)) state.status='won';
+  return true;
+}
+
+export function playCard(input:BattleState,uid:string,targetId?:string):BattleState {
+  if(input.status!=='playing') return input;
+  const instance=input.hand.find(c=>c.uid===uid);if(!instance)return input;
+  const card=CARDS[instance.cardId],preview=cardPreview(input,instance);if(!preview.canPlay)return input;
+  if(preview.targetMode==='single'&&!input.enemies.some(e=>e.id===targetId&&e.hp>0))return input;
+  const state=clone(input);state.hand=state.hand.filter(c=>c.uid!==uid);state.energy-=preview.cost;state.hp-=preview.hpCost;
+  state.rage-=card.rageCost||0;state.clones-=card.cloneCost||0;
+  const liveBefore=state.enemies.filter(e=>e.hp>0).length;
+  if(card.type==='attack'){
+    state.attacksPlayed=(state.attacksPlayed||0)+1;
+    state.effects.nextAttackCloneBonus=0;state.effects.nextAttackBonus=0;state.effects.nextAttackDiscount=0;
+    const targets=preview.targetMode==='all'?state.enemies.filter(e=>e.hp>0).map(e=>e.id):[targetId];
+    for(let t=0;t<targets.length;t++)for(let n=0;n<preview.hits;n++){
+      if(state.status!=='playing'||!state.enemies.some(e=>e.id===targets[t]&&e.hp>0))break;
+      hitEnemy(state,targets[t],preview.damage+(t===0&&n===0?preview.bonus:0));
+    }
+    if(card.id==='performance'||card.id==='thunder-ultimate')state.rage=0;
+    if(card.id==='autoreply'){
+      if(liveBefore===1)state.shield+=3;
+      else if(state.enemies.find(e=>e.id===targetId).hp===0){
+        for(let i=0;i<state.clones&&state.status==='playing';i++){
+          const other=state.enemies.find(e=>e.id!==targetId&&e.hp>0);if(other)hitEnemy(state,other.id,2);
+        }
+      }
+    }
+  }else if(card.id==='groups')state.clones=cap(state.clones+1,3);
+  else if(card.id==='possess'){if(state.clones)state.effects.nextAttackCloneBonus=3*state.clones;else drawCards(state,1);}
+  else if(card.id==='discount')state.effects.nextAttackDiscount=1;
+  else if(card.id==='stance')state.effects.nextAttackBonus=3;
+  else if(card.id==='signin')state.effects.shieldRage=true;
+  else if(card.id==='overtime')state.effects.counterRage=true;
+  state.shield+=preview.shield;state.rage=cap(state.rage+(card.rage||0),12);state.energy+=preview.energyGain;
+  // A terminal attack does not draw more cards after victory.
+  if(state.status==='playing'&&preview.draw)drawCards(state,preview.draw);
+  if(card.exile)state.exile.push(instance);else state.discard.push(instance);
+  log(state,`打出「${card.name}」`);return state;
+}
+
+function enemyHit(state:BattleState,amount:number) {
+  const absorbed=Math.min(state.shield,amount); state.shield-=absorbed; const lifeDamage=amount-absorbed; state.hp=Math.max(0,state.hp-lifeDamage);
+  if(state.effects.shieldRage && state.shield===0) { state.rage=cap(state.rage+3,12); state.effects.shieldRage=false; }
+  if(state.sectId==='thunder'&&lifeDamage>0&&!state.thunderTriggered){state.rage=cap(state.rage+1,12);state.thunderTriggered=true;}
+  if(state.effects.counterRage && lifeDamage>0) state.rage=cap(state.rage+2,12);
+  if(state.hp===0) state.status='lost';
+}
+
+export function endTurn(input:BattleState):BattleState {
+  if(input.status!=='playing') return input;
+  const state=clone(input); state.discard.push(...state.hand); state.hand=[];
+  for(const enemy of state.enemies) {
+    if(enemy.hp<=0 || state.status!=='playing') continue;
+    enemy.shield=0; const def=ENEMIES[enemy.type]; const action=def.actions[enemy.actionIndex%def.actions.length];
+    if(action.type==='shield') enemy.shield+=action.value;
+    else { const hits=action.hits||1; for(let i=0;i<hits && state.status==='playing';i++) enemyHit(state,action.value); }
+    enemy.actionIndex=(enemy.actionIndex+1)%def.actions.length;
+  }
+  if(state.status==='playing') { state.turn++; state.energy=3; state.attacksPlayed=0; state.thunderTriggered=false; state.effects.nextAttackDiscount=0; state.effects.nextAttackBonus=0; if(state.sectId!=='legacy')state.effects.nextAttackCloneBonus=0; state.shield=0; state.effects.shieldRage=false; state.effects.counterRage=false; drawCards(state,4); }
+  return state;
+}

@@ -1,0 +1,4 @@
+{
+ "compilerOptions":{"target":"ES2019","module":"CommonJS","moduleResolution":"Node","strict":false,"noEmitOnError":true,"rootDir":"../../cocos-first-pass/assets/scripts","lib":["ES2020","DOM"]},
+ "include":["../../cocos-first-pass/assets/scripts/core/**/*.ts","../../cocos-first-pass/assets/scripts/first-pass/**/*.ts","../../cocos-first-pass/assets/scripts/ui/presentation.ts"]
+}
