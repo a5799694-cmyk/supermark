@@ -1,11 +1,72 @@
-import { CARDS } from './cards.js?v=20261013-copy1';
-import { ENEMIES } from './enemies.js?v=20261013-copy1';
-
+import {CARDS} from './cards.js?v=20261013-sects1';
+import {ENEMIES} from './enemies.js?v=20261013-sects1';
+import {SECTS} from './sects.js?v=20261013-sects1';
+import {cardPreview} from './card-effects.js?v=20261013-sects1';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const cardText=c=>{const d=CARDS[c.cardId];if(d.id==='roll')return `对单体造成 ${c.upgraded?9:6} 伤害`;if(d.id==='not-this')return `获得 ${c.upgraded?10:7} 护盾`;if(d.id==='breathe')return `抽 ${c.upgraded?2:1} 张牌，获得1怒气；本场放逐`;if(d.id==='groups')return '增加1分身，抽1张牌（分身上限3）';if(d.id==='possess')return '下一张手动攻击追加3×分身数伤害；无分身时抽1张牌';if(d.id==='autoreply')return '单体7伤害；击杀后每个分身追击另一敌人2伤害；唯一敌人时改获3护盾';if(d.id==='signin')return '获得8护盾；本回合护盾池被攻击耗尽时获得3怒气，仅一次';if(d.id==='overtime')return '获得2怒气；本回合每次敌人命中生命再获得2怒气';return '单体造成5＋当前怒气×2伤害，并消耗全部怒气';};
-const button=(label,action,cls='primary')=>`<button class="${cls}" data-action='${JSON.stringify(action)}'>${label}</button>`;
-
-function battleView(run,ui){const b=run.battle,selected=b.hand.find(c=>c.uid===ui.selectedUid),selectedDef=selected&&CARDS[selected.cardId];const enemies=b.enemies.map(e=>{const def=ENEMIES[e.type],intent=def.actions[e.actionIndex%def.actions.length],intentText=intent.type==='shield'?`蓄盾 ${intent.value}`:intent.type==='multi'?`攻击 ${intent.value}×${intent.hits}`:`攻击 ${intent.value}`;return `<button class="enemy ${e.hp<=0?'dead':''}" data-target="${e.id}" ${!selectedDef||selectedDef.type!=='attack'||e.hp<=0?'disabled':''}><span class="enemy-art">${e.type==='boss'?'判':'傀'}</span><strong>${esc(def.name)}</strong><small>${intentText}</small><span>命 ${e.hp} · 盾 ${e.shield}</span></button>`}).join('');const cards=b.hand.map(c=>{const d=CARDS[c.cardId];return `<button class="card ${ui.selectedUid===c.uid?'selected':''}" data-card="${c.uid}" ${b.energy<d.cost?'disabled':''}><b class="cost">${d.cost}</b><strong>${esc(d.name)}</strong><small>${esc(cardText(c))}</small></button>`}).join('');return `<section class="battle"><header><span>第 ${b.turn} 回合</span><span>灵力 ${b.energy}/3</span></header><div class="sky-seal">雷劫审批区</div><div class="enemies">${enemies}</div><div class="hero"><div class="avatar">修</div><div class="stats"><span>命 ${b.hp}/40</span><span>盾 ${b.shield}</span><span>怒 ${b.rage}/12</span><span>分身 ${b.clones}/3</span></div></div>${selected?`<div class="inspect"><b>${esc(selectedDef.name)} · ${selectedDef.cost}灵力</b><br>${esc(cardText(selected))}${selectedDef.type==='attack'?'<small>请选择上方目标</small>':'<button data-confirm-card>确认打出</button>'}<button data-cancel>取消</button></div>`:''}<div class="hand">${cards}</div>${button('结束回合',{type:'END_TURN'},'end-turn')}</section>`;}
-
-export function render(root,run,ui,dispatch){let content='';if(ui.recoveryRequired)content=`<section class="scene"><h2>存档需要处理</h2><p>${esc(ui.storageError)}</p><p>原存档不会被自动覆盖。确认后将清除损坏存档并重新开始。</p><button class="primary" data-recover>清除并重新开始</button></section>`;else if(run.stage==='intro')content=`<section class="scene intro"><div class="moon"></div><div class="sleeping">zzz</div><h1>梦里修仙</h1><h2>雷劫办事大厅</h2><p>返工返到死，死咗仲要返。</p>${run.souvenir?`<div class="souvenir">桌上摆着：${esc(run.souvenir)}</div>`:''}${button('开工渡劫',{type:'START'})}</section>`;else if(run.stage==='battle'||run.stage==='boss')content=battleView(run,ui);else if(run.stage==='reward')content=`<section class="scene"><h2>拣招开打</h2><p>拣一本，唔好贪。</p><div class="reward-list">${run.rewards.map(id=>{const d=CARDS[id];return `<button class="reward" data-action='${JSON.stringify({type:'CHOOSE_REWARD',cardId:id})}'><b>${esc(d.name)} · ${d.cost}灵力</b><small>${esc(cardText({cardId:id,upgraded:false}))}</small></button>`}).join('')}</div>${button('唔要',{type:'CHOOSE_REWARD',cardId:null},'ghost')}</section>`;else if(run.stage==='event'){const pending=ui.pendingAction&&run.deck.find(c=>c.uid===ui.pendingAction.uid);content=`<section class="scene"><h2>炒牌大会</h2><p>删一张牌，或强化一张基础牌。</p>${pending?`<div class="inspect"><b>确认${ui.pendingAction.kind==='delete'?'删除':'强化'}「${esc(CARDS[pending.cardId].name)}」？</b><br>${esc(cardText({...pending,upgraded:ui.pendingAction.kind==='upgrade'||pending.upgraded}))}<button data-confirm-event>确认</button><button data-cancel-event>取消</button></div>`:''}<div class="reward-list">${run.deck.map(c=>`<div class="event-card"><div><b>${esc(CARDS[c.cardId].name)}${c.upgraded?' ＋':''} · ${CARDS[c.cardId].cost}灵力</b><small>${esc(cardText(c))}</small></div><span><button class="ghost" data-event='${JSON.stringify({type:'CHOOSE_EVENT',kind:'delete',uid:c.uid})}'>删除</button>${CARDS[c.cardId].upgraded&&!c.upgraded?`<button class="primary" data-event='${JSON.stringify({type:'CHOOSE_EVENT',kind:'upgrade',uid:c.uid})}'>强化</button>`:''}</span></div>`).join('')}</div></section>`;}else if(run.stage==='second-ready')content=`<section class="scene"><h2>又要开会</h2><p>又系你条粉肠。</p>${button('继续排队',{type:'CONTINUE'})}</section>`;else if(run.stage==='boss-ready')content=`<section class="scene"><h2>老细驾到</h2><p>画饼？食我一掌。</p>${button('面见审批官',{type:'CONTINUE'})}</section>`;else content=`<section class="scene result"><h1>${run.result==='won'?'散水成功':'惨遭炒鱿'}</h1><p>${run.result==='won'?'飞升？散水啦！':'炒鱿都冇赔偿。'}</p>${run.souvenir?`<div class="souvenir">纪念品：${esc(run.souvenir)}</div>`:''}${button('唔服，再嚟',{type:'RESTART',seed:(Date.now()&0xffffffff)>>>0})}</section>`;root.innerHTML=`<div class="game-shell">${ui.storageError&&!ui.recoveryRequired?`<div class="warning">${esc(ui.storageError)}</div>`:''}${content}<footer>梦里修仙 · 粤语版 20261013</footer></div>`;root.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',()=>dispatch(JSON.parse(el.dataset.action))));root.querySelectorAll('[data-card]').forEach(el=>el.addEventListener('click',()=>{ui.selectedUid=el.dataset.card;render(root,run,ui,dispatch)}));root.querySelectorAll('[data-target]').forEach(el=>el.addEventListener('click',()=>ui.selectedUid&&dispatch({type:'PLAY_CARD',uid:ui.selectedUid,targetId:el.dataset.target})));root.querySelector('[data-cancel]')?.addEventListener('click',()=>{ui.selectedUid=null;render(root,run,ui,dispatch)});root.querySelector('[data-confirm-card]')?.addEventListener('click',()=>ui.selectedUid&&dispatch({type:'PLAY_CARD',uid:ui.selectedUid}));root.querySelectorAll('[data-event]').forEach(el=>el.addEventListener('click',()=>{ui.pendingAction=JSON.parse(el.dataset.event);render(root,run,ui,dispatch)}));root.querySelector('[data-confirm-event]')?.addEventListener('click',()=>dispatch(ui.pendingAction));root.querySelector('[data-cancel-event]')?.addEventListener('click',()=>{ui.pendingAction=null;render(root,run,ui,dispatch)});root.querySelector('[data-recover]')?.addEventListener('click',()=>ui.recover());}
-
+const button=(label,action,cls='primary')=>`<button class="${cls}" data-action='${esc(JSON.stringify(action))}'>${label}</button>`;
+export function cardText(c,state){
+ const d=CARDS[c.cardId],p=cardPreview(state,c);let text='';
+ const attack=p.hits>1||d.id==='clone-ultimate'?`${p.damage}×${p.hits}伤害`:`${p.damage}伤害`;
+ switch(d.id){
+ case 'roll':text=`单体${p.damage}伤害`;break;
+ case 'not-this':text=`获得${p.shield}护盾`;break;
+ case 'breathe':text=`抽${p.draw}牌，获得1怒气，本场放逐`;break;
+ case 'groups':text='增加1分身，抽1牌，上限3';break;
+ case 'possess':text=state?(state.clones?`下张攻击追加${state.clones*3}伤害`:'无分身，改抽1牌'):'下张攻击追加分身数×3伤害，无分身则抽1牌';break;
+ case 'autoreply':text='单体7伤害，击杀后分身追击；仅剩一敌时获3盾';break;
+ case 'signin':text='获得8盾，本回合盾被攻击耗尽获3怒气，仅一次';break;
+ case 'overtime':text='获得2怒气，本回合每次受生命伤害再获2怒气';break;
+ case 'performance':text=state?`单体${p.damage}伤害，消耗全部怒气`:'单体5＋怒气×2伤害，消耗全部怒气';break;
+ case 'triple':text=`单体${attack}`;break;
+ case 'free-slash':text='单体3伤害，本场放逐';break;
+ case 'draw-slash':text='单体5伤害，抽1牌';break;
+ case 'discount':text='本回合下张攻击减1费，本场放逐';break;
+ case 'stance':text='获得5盾，下张攻击追加3伤害';break;
+ case 'sword-ultimate':text=state?`单体${p.damage}伤害`:'单体12＋本回合此前攻击牌数×3伤害';break;
+ case 'thunder-ultimate':text=state?`全体${p.damage}伤害，消耗全部怒气`:'全体5＋怒气伤害，消耗全部怒气';break;
+ case 'rage-guard':text='获得5盾和1怒气';break;
+ case 'rage-energy':text='耗2怒气，回1灵力、抽1牌，本场放逐';break;
+ case 'clone-guard':text=state?`获得${p.shield}护盾`:'获得4＋分身数×2护盾';break;
+ case 'clone-ultimate':text=state?`支付6生命，单体${attack}`:'支付6生命，每个分身攻击同一目标6伤害';break;
+ case 'clone-energy':text='耗1分身，回1灵力、抽1牌，本场放逐';break;
+ }
+ if(state&&p.bonus)text+=`；首击额外＋${p.bonus}`;
+ return text+'。';
+}
+function introView(run,ui){
+ if(run.sectId==='legacy')return `<section class="scene intro"><h1>梦里修仙</h1><p>旧梦续打，新梦选派。</p>${button('继续旧梦',{type:'START'})}</section>`;
+ return `<section class="scene intro"><div class="moon mini"></div><h1>梦里修仙</h1><p>返工返到死，死咗仲要返。</p><div class="sect-list">${Object.values(SECTS).map(s=>`<button class="sect-choice ${ui.selectedSectId===s.id?'chosen':''}" data-sect="${s.id}"><strong>${s.name}</strong><span>${s.style}</span><p>${s.motto}</p><small>${s.passive}</small></button>`).join('')}</div><button class="primary" data-start ${!SECTS[ui.selectedSectId]?'disabled':''}>${SECTS[ui.selectedSectId]?`拜入${SECTS[ui.selectedSectId].name}`:'拣个门派，开工渡劫'}</button>${run.souvenir?`<div class="souvenir">纪念品：${esc(run.souvenir)}</div>`:''}</section>`;
+}
+function battleView(run,ui){
+ const b=run.battle,sect=SECTS[run.sectId],selected=b.hand.find(c=>c.uid===ui.selectedUid),preview=selected&&cardPreview(b,selected);
+ const enemies=b.enemies.map(e=>{const d=ENEMIES[e.type],a=d.actions[e.actionIndex%d.actions.length];const intent=a.type==='shield'?`蓄盾 ${a.value}`:a.type==='multi'?`攻击 ${a.value}×${a.hits}`:`攻击 ${a.value}`;return `<button class="enemy ${e.hp<=0?'dead':''}" data-target="${e.id}" ${!preview?.canPlay||preview.targetMode!=='single'||e.hp<=0?'disabled':''}><span class="enemy-art">${e.type==='boss'?'判':'傀'}</span><strong>${esc(d.name)}</strong><small>${intent}</small><span>命 ${e.hp} · 盾 ${e.shield}</span></button>`;}).join('');
+ const cards=b.hand.map(c=>{const d=CARDS[c.cardId],p=cardPreview(b,c);return `<button class="card ${ui.selectedUid===c.uid?'selected':''} ${!p.canPlay?'unavailable':''}" data-card="${c.uid}"><b class="cost">${p.cost}</b>${d.ultimate?'<span class="ultimate">大招</span>':''}<strong>${esc(d.name)}</strong><small>${esc(cardText(c,b))}</small>${!p.canPlay?`<span class="reason">${p.reason}</span>`:''}</button>`;}).join('');
+ const inspect=selected?`<div class="inspect"><b>${esc(CARDS[selected.cardId].name)} · ${preview.cost}灵力</b><p>${esc(cardText(selected,b))}</p>${preview.hpCost?'<strong class="life-cost">支付6生命，无视护盾</strong>':''}${!preview.canPlay?`<small>${preview.reason}</small>`:preview.targetMode==='single'?'<small>请选择上方目标</small>':'<button class="ghost" data-confirm-card>确认打出</button>'}<button class="ghost" data-cancel>取消</button></div>`:'';
+ return `<section class="battle"><header><span>第 ${b.turn} 回合</span><span>灵力 ${b.energy} / 基础3</span></header><div class="sect-status"><b>${sect?.name||'旧梦修士'}</b><small>${sect?.passive||'本局沿用旧牌组'}${run.sectId==='sword'?` · 已攻${b.attacksPlayed}张`:''}</small></div><div class="sky-seal">雷劫审批区</div><div class="enemies">${enemies}</div><div class="hero"><div class="avatar">修</div><div class="stats"><span>命 ${b.hp}/40</span><span>盾 ${b.shield}</span><span>怒 ${b.rage}/12</span><span>分身 ${b.clones}/3</span></div></div>${inspect}<div class="hand">${cards}</div>${button('结束回合',{type:'END_TURN'},'end-turn')}</section>`;
+}
+function rewardView(run){return `<section class="scene"><h2>拣招开打</h2><p>功法拣好，老细放倒。</p><div class="reward-list">${run.rewards.map(id=>{const d=CARDS[id];return `<button class="reward" data-action='${esc(JSON.stringify({type:'CHOOSE_REWARD',cardId:id}))}'><b>${d.ultimate?'【大招】':''}${esc(d.name)} · ${d.cost}灵力</b><small>${esc(cardText({cardId:id,upgraded:false}))}</small></button>`;}).join('')}</div>${button('唔要',{type:'CHOOSE_REWARD',cardId:null},'ghost')}</section>`;}
+function eventView(run,ui){const pending=ui.pendingAction&&run.deck.find(c=>c.uid===ui.pendingAction.uid);return `<section class="scene"><h2>炒牌大会</h2><p>废牌删开，好牌改帅。</p><small>删一张牌，或强化一张通用牌。</small>${pending?`<div class="inspect"><b>确认${ui.pendingAction.kind==='delete'?'删除':'强化'}「${esc(CARDS[pending.cardId].name)}」？</b><p>${esc(cardText({...pending,upgraded:ui.pendingAction.kind==='upgrade'||pending.upgraded}))}</p><button class="ghost" data-confirm-event>确认</button><button class="ghost" data-cancel-event>取消</button></div>`:''}<div class="reward-list">${run.deck.map(c=>`<div class="event-card"><div><b>${esc(CARDS[c.cardId].name)}${c.upgraded?' ＋':''}</b><small>${esc(cardText(c))}</small></div><span><button class="ghost" data-event='${esc(JSON.stringify({type:'CHOOSE_EVENT',kind:'delete',uid:c.uid}))}' ${run.deck.length<=5||CARDS[c.cardId].type==='attack'&&run.deck.filter(x=>CARDS[x.cardId].type==='attack').length===1?'disabled':''}>删除</button>${CARDS[c.cardId].upgraded&&!c.upgraded?`<button class="primary" data-event='${esc(JSON.stringify({type:'CHOOSE_EVENT',kind:'upgrade',uid:c.uid}))}'>强化</button>`:''}</span></div>`).join('')}</div></section>`;}
+export function render(root,run,ui,dispatch){
+ let content='';
+ if(ui.recoveryRequired)content=`<section class="scene"><h2>存档需要处理</h2><p>${esc(ui.storageError)}</p><p>原存档不会被自动覆盖，确认后清除并重开。</p><button class="primary" data-recover>清除并重新开始</button></section>`;
+ else if(run.stage==='intro')content=introView(run,ui);
+ else if(['battle','boss'].includes(run.stage))content=battleView(run,ui);
+ else if(run.stage==='reward')content=rewardView(run);
+ else if(run.stage==='event')content=eventView(run,ui);
+ else if(run.stage==='second-ready')content=`<section class="scene"><h2>又要开会</h2><p>一人讲完，两人加班。</p>${button('继续排队',{type:'CONTINUE'})}</section>`;
+ else if(run.stage==='boss-ready')content=`<section class="scene"><h2>老细驾到</h2><p>画饼唔食，雷劈剑劈。</p>${button('面见审批官',{type:'CONTINUE'})}</section>`;
+ else content=`<section class="scene result"><h1>${run.result==='won'?'散水成功':'惨遭炒鱿'}</h1><p>${run.result==='won'?'飞升唔加薪，散水做仙人。':'炒鱿冇赔偿，瞓醒再开场。'}</p>${run.souvenir?`<div class="souvenir">纪念品：${esc(run.souvenir)}</div>`:''}${button('唔服，再嚟',{type:'RESTART',seed:(Date.now()&0xffffffff)>>>0})}</section>`;
+ root.innerHTML=`<div class="game-shell">${ui.storageError&&!ui.recoveryRequired?`<div class="warning">${esc(ui.storageError)}</div>`:''}${content}<footer>梦里修仙 · 三门派版 v0.2 · 20261013</footer></div>`;
+ const redraw=()=>render(root,run,ui,dispatch);
+ root.querySelectorAll('[data-action]').forEach(el=>el.addEventListener('click',()=>dispatch(JSON.parse(el.dataset.action))));
+ root.querySelectorAll('[data-sect]').forEach(el=>el.addEventListener('click',()=>{ui.selectedSectId=el.dataset.sect;redraw();}));
+ root.querySelector('[data-start]')?.addEventListener('click',()=>dispatch({type:'START',sectId:ui.selectedSectId}));
+ root.querySelectorAll('[data-card]').forEach(el=>el.addEventListener('click',()=>{ui.selectedUid=el.dataset.card;redraw();}));
+ root.querySelectorAll('[data-target]').forEach(el=>el.addEventListener('click',()=>ui.selectedUid&&dispatch({type:'PLAY_CARD',uid:ui.selectedUid,targetId:el.dataset.target})));
+ root.querySelector('[data-confirm-card]')?.addEventListener('click',()=>ui.selectedUid&&dispatch({type:'PLAY_CARD',uid:ui.selectedUid}));
+ root.querySelector('[data-cancel]')?.addEventListener('click',()=>{ui.selectedUid=null;redraw();});
+ root.querySelectorAll('[data-event]').forEach(el=>el.addEventListener('click',()=>{ui.pendingAction=JSON.parse(el.dataset.event);redraw();}));
+ root.querySelector('[data-confirm-event]')?.addEventListener('click',()=>dispatch(ui.pendingAction));
+ root.querySelector('[data-cancel-event]')?.addEventListener('click',()=>{ui.pendingAction=null;redraw();});
+ root.querySelector('[data-recover]')?.addEventListener('click',()=>ui.recover());
+}

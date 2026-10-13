@@ -1,21 +1,31 @@
-import { STARTER_IDS, CARDS, createCardInstance } from './cards.js?v=20261013-copy1';
-import { createBattle, playCard, endTurn } from './battle.js?v=20261013-copy1';
-import { shuffle } from './random.js?v=20261013-copy1';
+import { STARTER_IDS, CARDS, createCardInstance } from './cards.js?v=20261013-sects1';
+import { createBattle, playCard, endTurn } from './battle.js?v=20261013-sects1';
+import {SECTS,createStarterDeck} from './sects.js?v=20261013-sects1';
+import { shuffle } from './random.js?v=20261013-sects1';
 
 const makeDeck=()=>STARTER_IDS.map((id,i)=>createCardInstance(id,`c${i+1}`));
 const copy=value=>structuredClone(value);
 
 export function createRun(seed=Date.now(),profile={}) {
-  return {version:1,stage:'intro',deck:makeDeck(),hp:40,battle:null,seed:seed>>>0,rewards:[],route:null,history:[],souvenir:profile.souvenir||null,result:null,nextUid:7};
+  return {version:2,sectId:null,rewardSeen:[],stage:'intro',deck:makeDeck(),hp:40,battle:null,seed:seed>>>0,rewards:[],route:null,history:[],souvenir:profile.souvenir||null,result:null,nextUid:7};
 }
 
 function beginBattle(run,kind) {
   const enemyIds=kind==='first'?['dummy']:kind==='second'?['dummy','dummy-shield']:['boss'];
-  run.battle=createBattle(run.deck,run.hp,enemyIds,run.seed); run.seed=run.battle.seed; run.stage=kind==='boss'?'boss':'battle'; run.history.push(kind);
+  run.battle=createBattle(run.deck,run.hp,enemyIds,run.seed,run.sectId); run.seed=run.battle.seed; run.stage=kind==='boss'?'boss':'battle'; run.history.push(kind);
 }
 
 export function buildRewards(run) {
   const battleCount=run.history.filter(x=>['first','second','boss'].includes(x)).length;
+  if(SECTS[run.sectId]){
+    const sect=SECTS[run.sectId],seen=run.rewardSeen||[];
+    const fixed=battleCount===1?sect.core:sect.ultimate;
+    let candidates=battleCount===1?Object.values(CARDS).filter(c=>c.sect===run.sectId&&!c.ultimate&&c.id!==fixed&&!sect.starter.includes(c.id)).map(c=>c.id):sect.synergy.filter(id=>!seen.includes(id));
+    if(!candidates.length)candidates=Object.values(CARDS).filter(c=>c.sect===run.sectId&&c.id!==fixed&&!seen.includes(c.id)).map(c=>c.id);
+    const mixed=shuffle(candidates,run.seed);run.seed=mixed.seed;
+    const basic=shuffle(['roll','not-this','breathe'],run.seed);run.seed=basic.seed;
+    const choices=[fixed,mixed.items[0],basic.items[0]];run.rewardSeen=[...new Set([...seen,...choices])];return choices;
+  }
   if(battleCount===1) {
     const basics=shuffle(['roll','not-this','breathe'],run.seed); run.seed=basics.seed;
     return ['groups','signin',basics.items[0]];
@@ -39,9 +49,12 @@ function afterBattle(run) {
 export function applyAction(input,action) {
   if(action.type==='RESTART' && input.stage==='result') return createRun(action.seed,{souvenir:input.souvenir});
   const run=copy(input);
-  if(action.type==='START' && input.stage==='intro') { beginBattle(run,'first'); return run; }
-  if((input.stage==='battle'||input.stage==='boss') && action.type==='PLAY_CARD') run.battle=playCard(run.battle,action.uid,action.targetId);
-  else if((input.stage==='battle'||input.stage==='boss') && action.type==='END_TURN') run.battle=endTurn(run.battle);
+  if(action.type==='START' && input.stage==='intro') {
+    if(input.sectId!=='legacy'){if(!SECTS[action.sectId])return input;run.sectId=action.sectId;run.deck=createStarterDeck(action.sectId);}
+    beginBattle(run,'first');return run;
+  }
+  if((input.stage==='battle'||input.stage==='boss') && action.type==='PLAY_CARD') {const next=playCard(input.battle,action.uid,action.targetId);if(next===input.battle)return input;run.battle=next;}
+  else if((input.stage==='battle'||input.stage==='boss') && action.type==='END_TURN') {const next=endTurn(input.battle);if(next===input.battle)return input;run.battle=next;}
   else if(input.stage==='reward' && action.type==='CHOOSE_REWARD') {
     if(action.cardId!==null && !run.rewards.includes(action.cardId)) return input;
     if(action.cardId) { run.deck.push(createCardInstance(action.cardId,`c${run.nextUid++}`)); if(!run.route) run.route=CARDS[action.cardId].route||null; }
