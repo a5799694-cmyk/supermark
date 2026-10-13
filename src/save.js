@@ -1,5 +1,5 @@
-import { CARDS } from './cards.js?v=20261013';
-import { ENEMIES } from './enemies.js?v=20261013';
+import { CARDS } from './cards.js?v=20261013-copy1';
+import { ENEMIES } from './enemies.js?v=20261013-copy1';
 
 export const SAVE_KEY='dream-cultivation-v1';
 const stages=new Set(['intro','battle','reward','event','second-ready','boss-ready','boss','result']);

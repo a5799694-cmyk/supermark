@@ -1,6 +1,6 @@
-import { CARDS } from './cards.js?v=20261013';
-import { ENEMIES } from './enemies.js?v=20261013';
-import { shuffle } from './random.js?v=20261013';
+import { CARDS } from './cards.js?v=20261013-copy1';
+import { ENEMIES } from './enemies.js?v=20261013-copy1';
+import { shuffle } from './random.js?v=20261013-copy1';
 
 const cap = (value,max) => Math.max(0,Math.min(max,value));
 const clone = value => structuredClone(value);
