@@ -1,0 +1,54 @@
+[
+  {
+    "id": "sword",
+    "file": "assets/characters/sword.webp",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "bytes": 229790,
+    "sha256": "45bdcfab5cedef6a36fe24db56c1658de5b83ba3496f1e55c112fadb7ab31dc0",
+    "approvedSource": "exec-63f6f131-16d6-4196-98c5-07cd567e0262.png",
+    "processedSource": "exec-9b75fd3a-4d40-45a8-805f-55926a9136bc.png",
+    "provenance": "ChatGPT image generation in project conversation; supplied by user for game integration",
+    "usage": "selection idle and three battle poses; runtime SVG viewport slicing"
+  },
+  {
+    "id": "thunder",
+    "file": "assets/characters/thunder.webp",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "bytes": 235214,
+    "sha256": "996839a3f35e80e9bd37c489465cec49a9a32df0f8164a5926778a01c00fe391",
+    "approvedSource": "exec-6ce2f849-c00c-41eb-a599-73d14ecd7ac2.png",
+    "processedSource": "exec-c80e8add-5544-4272-b2e3-617bb9872306.png",
+    "provenance": "ChatGPT image generation in project conversation; supplied by user for game integration",
+    "usage": "selection idle and three battle poses; runtime SVG viewport slicing"
+  },
+  {
+    "id": "clone",
+    "file": "assets/characters/clone.webp",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "bytes": 219280,
+    "sha256": "c650b667c9a002c0120519179b5a495df41debee658d2f29e9537e9fab355e1b",
+    "approvedSource": "exec-d7f7be4d-d359-4c57-824e-2cb9cdc398fc.png",
+    "processedSource": "exec-a3a53993-91a4-48d1-b05e-dd779eac12b8.png",
+    "provenance": "ChatGPT image generation in project conversation; supplied by user for game integration",
+    "usage": "selection idle and three battle poses; runtime SVG viewport slicing"
+  },
+  {
+    "id": "boss",
+    "file": "assets/characters/boss.webp",
+    "width": 1024,
+    "height": 1536,
+    "hasAlpha": true,
+    "bytes": 272660,
+    "sha256": "b3b0355601ea56c6bf3e24b94c9d9af81aea0b05aefbce51ac25d31a0c32a583",
+    "approvedSource": "exec-d3bbd222-cc26-4ff7-9298-510bf5f3d314.png",
+    "processedSource": "exec-d3bbd222-cc26-4ff7-9298-510bf5f3d314.png",
+    "provenance": "ChatGPT image generation in project conversation; supplied by user for game integration",
+    "usage": "static boss encounter portrait"
+  }
+]

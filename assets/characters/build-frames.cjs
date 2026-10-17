@@ -1,0 +1,8 @@
+// Optional authoring utility: run from repository root with sharp available. Not needed to play.
+const sharp=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES?process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/sharp':'sharp'),fs=require('fs');
+(async()=>{const out={};for(const id of ['sword','thunder','clone']){const {data,info}=await sharp(`assets/characters/${id}.webp`).ensureAlpha().raw().toBuffer({resolveWithObject:true});const w=info.width,h=info.height,seams=[];
+for(const mid of [445,950]){const lo=mid-95,n=181,parents=new Int16Array(h*n);let prev=Array.from({length:n},(_,j)=>Math.abs(lo+j-mid)*.02);
+for(let y=0;y<h;y++){const row=[];for(let j=0;j<n;j++){let best=Infinity,p=j;for(let k=Math.max(0,j-3);k<=Math.min(n-1,j+3);k++){const v=prev[k]+Math.abs(j-k)*2;if(v<best){best=v;p=k;}}const a=data[(y*w+lo+j)*4+3];row[j]=best+a*a/100+Math.abs(lo+j-mid)*.002;parents[y*n+j]=p;}prev=row;}
+let j=prev.indexOf(Math.min(...prev)),seam=[];for(let y=h-1;y>=0;y--){seam[y]=lo+j;j=parents[y*n+j];}seams.push(seam);}
+const frames=[];for(let i=0;i<3;i++){const left=i?seams[i-1]:Array(h).fill(0),right=i<2?seams[i]:Array(h).fill(w),points=[];for(let y=0;y<h;y++)points.push(`${left[y]},${y}`);for(let y=h-1;y>=0;y--)points.push(`${right[y]},${y}`);const x=Math.min(...left),r=Math.max(...right);frames.push({box:[x,0,r-x,h],clip:points.join(' ')});}out[id]={size:[w,h],frames};}
+out.boss={size:[1024,1536],frames:[{box:[0,0,1024,1536],clip:null}]};fs.writeFileSync('src/character-frames.js','// Continuous low-alpha seams separate sprites without repainting the approved atlas.\nexport const CHARACTER_FRAMES='+JSON.stringify(out)+';\n');})();

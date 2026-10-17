@@ -1,7 +1,7 @@
-import { CARDS } from './cards.js?v=20261017-combat1';
-import { ENEMIES } from './enemies.js?v=20261017-combat1';
-import { cardPreview } from './card-effects.js?v=20261017-combat1';
-import { shuffle } from './random.js?v=20261017-combat1';
+import { CARDS } from './cards.js?v=20261017-art1';
+import { ENEMIES } from './enemies.js?v=20261017-art1';
+import { cardPreview } from './card-effects.js?v=20261017-art1';
+import { shuffle } from './random.js?v=20261017-art1';
 
 const cap = (value,max) => Math.max(0,Math.min(max,value));
 const clone = value => structuredClone(value);

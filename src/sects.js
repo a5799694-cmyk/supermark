@@ -1,4 +1,4 @@
-import {createCardInstance} from './cards.js?v=20261017-combat1';
+import {createCardInstance} from './cards.js?v=20261017-art1';
 export const SECTS=Object.freeze({
  sword:{id:'sword',name:'斩仙堂',motto:'加班免谈，老细照斩。',style:'连击 · 单体爆发',passive:'每回合第3张手动攻击追加3伤害。',starter:['roll','roll','triple','not-this','not-this','breathe'],core:'discount',ultimate:'sword-ultimate',synergy:['free-slash','draw-slash']},
  thunder:{id:'thunder',name:'惊雷府',motto:'有锅我扛，有雷你尝。',style:'护盾 · 怒气 · 群攻',passive:'每回合首次受到生命伤害，获得1怒气。',starter:['roll','roll','roll','not-this','signin','breathe'],core:'overtime',ultimate:'thunder-ultimate',synergy:['performance','rage-energy']},

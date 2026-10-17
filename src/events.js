@@ -1,5 +1,5 @@
-import {CARDS,createCardInstance} from './cards.js?v=20261017-combat1';
-import {shuffle,nextRandom} from './random.js?v=20261017-combat1';
+import {CARDS,createCardInstance} from './cards.js?v=20261017-art1';
+import {shuffle,nextRandom} from './random.js?v=20261017-art1';
 
 export const EVENT_KINDS=Object.freeze(['cat','work','rest','manual']);
 export const EVENT_COPY=Object.freeze({
