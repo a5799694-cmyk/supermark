@@ -32,3 +32,13 @@ test('Cocos illegal actions preserve identity and paid ultimate has the same bou
  b.hp=7;assert.equal(core.playCard(b,'ultimate','e0').hp,1);
  const dead={...snapshot,enemies:snapshot.enemies.map(e=>({...e,hp:0}))};assert.equal(core.playCard(dead,dead.hand.find(c=>CARDS[c.cardId].type==='attack').uid,'e0'),dead);
 });
+test('Cocos multi-target ultimates and clone pursuit keep exact resolver and combat log parity',()=>{
+ const core=loadCore('core/battle');
+ for(const [sect,id] of [['sword','triple'],['thunder','thunder-ultimate'],['clone','autoreply']]){
+  const a=browser.createBattle(createStarterDeck(sect),40,['dummy','dummy-shield'],7,sect);
+  a.hand=[createCardInstance(id,'test')];a.clones=3;a.rage=4;a.enemies[0].hp=1;a.enemies[0].shield=2;
+  const target=sect==='thunder'?undefined:'e0';
+  const x=browser.playCard(a,'test',target),y=core.playCard(structuredClone(a),'test',target);
+  assert.deepEqual(y,x);assert.deepEqual(core.endTurn(y),browser.endTurn(x));
+ }
+});

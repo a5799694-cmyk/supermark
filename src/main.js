@@ -1,15 +1,17 @@
-import { createRun, applyAction } from './run.js?v=20261013-events1';
-import { loadRun, saveRun } from './save.js?v=20261013-events1';
-import { render } from './view.js?v=20261013-events1';
+import { createRun, applyAction } from './run.js?v=20261017-combat1';
+import { loadRun, saveRun } from './save.js?v=20261017-combat1';
+import { render } from './view.js?v=20261017-combat1';
 
-export function createDispatcher({getRun,setRun,apply=applyAction,save,render:draw}) {
-  let locked=false;
+export function createDispatcher({getRun,setRun,apply=applyAction,save,render:draw,now=Date.now}) {
+  let locked=false,endTurnUntil=0;
   const dispatch=action=>{
-    if(locked) return; locked=true;
-    try { const before=getRun(); const after=apply(before,action); if(after!==before) { setRun(after); save(after); } draw(); }
+    if(locked||action.type==='END_TURN'&&now()<endTurnUntil) return; locked=true;
+    try { const before=getRun(); const after=apply(before,action); if(after!==before) { if(action.type==='END_TURN')endTurnUntil=now()+450;
+      else if(['PLAY_CARD','START','RESTART'].includes(action.type))endTurnUntil=0;
+      setRun(after); save(after); } draw(); }
     finally { queueMicrotask(()=>{locked=false}); }
   };
-  dispatch.isLocked=()=>locked; return dispatch;
+  dispatch.isLocked=()=>locked; dispatch.canEndTurn=()=>now()>=endTurnUntil; return dispatch;
 }
 
 export function safeStorage(host=globalThis) {

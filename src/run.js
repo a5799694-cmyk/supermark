@@ -1,8 +1,8 @@
-import { STARTER_IDS, CARDS, createCardInstance } from './cards.js?v=20261013-events1';
-import { createBattle, playCard, endTurn } from './battle.js?v=20261013-events1';
-import {SECTS,createStarterDeck} from './sects.js?v=20261013-events1';
-import { shuffle } from './random.js?v=20261013-events1';
-import {createAdventure,advanceEncounter,resolveEncounter} from './events.js?v=20261013-events1';
+import { STARTER_IDS, CARDS, createCardInstance } from './cards.js?v=20261017-combat1';
+import { createBattle, playCard, endTurn } from './battle.js?v=20261017-combat1';
+import {SECTS,createStarterDeck} from './sects.js?v=20261017-combat1';
+import { shuffle } from './random.js?v=20261017-combat1';
+import {createAdventure,advanceEncounter,resolveEncounter} from './events.js?v=20261017-combat1';
 
 const makeDeck=()=>STARTER_IDS.map((id,i)=>createCardInstance(id,`c${i+1}`));
 const copy=value=>structuredClone(value);

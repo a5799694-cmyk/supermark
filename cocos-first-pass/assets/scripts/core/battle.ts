@@ -30,7 +30,9 @@ export function createBattle(deck:CardInstance[],hp:number,enemyIds:string[],see
 
 function hitEnemy(state:BattleState,targetId:string,damage:number) {
   const target=state.enemies.find(e=>e.id===targetId && e.hp>0); if(!target) return false;
+  const hpBefore=target.hp;
   const absorbed=Math.min(target.shield,damage); target.shield-=absorbed; target.hp=Math.max(0,target.hp-(damage-absorbed));
+  log(state,`${target.name}：掉血${hpBefore-target.hp}，破盾${absorbed}${target.hp===0?'，击败':''}`);
   if(state.enemies.every(e=>e.hp<=0)) state.status='won';
   return true;
 }
@@ -42,6 +44,7 @@ export function playCard(input:BattleState,uid:string,targetId?:string):BattleSt
   if(preview.targetMode==='single'&&!input.enemies.some(e=>e.id===targetId&&e.hp>0))return input;
   const state=clone(input);state.hand=state.hand.filter(c=>c.uid!==uid);state.energy-=preview.cost;state.hp-=preview.hpCost;
   state.rage-=card.rageCost||0;state.clones-=card.cloneCost||0;
+  log(state,`打出「${card.name}」 · 耗灵${preview.cost}${preview.hpCost?` · 支付${preview.hpCost}生命`:''}`);
   const liveBefore=state.enemies.filter(e=>e.hp>0).length;
   if(card.type==='attack'){
     state.attacksPlayed=(state.attacksPlayed||0)+1;
@@ -70,7 +73,7 @@ export function playCard(input:BattleState,uid:string,targetId?:string):BattleSt
   // A terminal attack does not draw more cards after victory.
   if(state.status==='playing'&&preview.draw)drawCards(state,preview.draw);
   if(card.exile)state.exile.push(instance);else state.discard.push(instance);
-  log(state,`打出「${card.name}」`);return state;
+  log(state,`结算：灵力${state.energy} · 护盾${state.shield} · 怒气${state.rage} · 分身${state.clones}`);return state;
 }
 
 function enemyHit(state:BattleState,amount:number) {
@@ -78,19 +81,21 @@ function enemyHit(state:BattleState,amount:number) {
   if(state.effects.shieldRage && state.shield===0) { state.rage=cap(state.rage+3,12); state.effects.shieldRage=false; }
   if(state.sectId==='thunder'&&lifeDamage>0&&!state.thunderTriggered){state.rage=cap(state.rage+1,12);state.thunderTriggered=true;}
   if(state.effects.counterRage && lifeDamage>0) state.rage=cap(state.rage+2,12);
+  log(state,`受到${lifeDamage}生命伤害，护盾抵挡${absorbed}`);
   if(state.hp===0) state.status='lost';
 }
 
 export function endTurn(input:BattleState):BattleState {
   if(input.status!=='playing') return input;
-  const state=clone(input); state.discard.push(...state.hand); state.hand=[];
+  const state=clone(input); log(state,`第${state.turn}回合结束 · 敌方行动`); state.discard.push(...state.hand); state.hand=[];
   for(const enemy of state.enemies) {
     if(enemy.hp<=0 || state.status!=='playing') continue;
     enemy.shield=0; const def=ENEMIES[enemy.type]; const action=def.actions[enemy.actionIndex%def.actions.length];
+    log(state,`${enemy.name}：${action.type==='shield'?'蓄盾':'攻击'}${action.value}${action.hits?`×${action.hits}`:''}`);
     if(action.type==='shield') enemy.shield+=action.value;
     else { const hits=action.hits||1; for(let i=0;i<hits && state.status==='playing';i++) enemyHit(state,action.value); }
     enemy.actionIndex=(enemy.actionIndex+1)%def.actions.length;
   }
-  if(state.status==='playing') { state.turn++; state.energy=3; state.attacksPlayed=0; state.thunderTriggered=false; state.effects.nextAttackDiscount=0; state.effects.nextAttackBonus=0; if(state.sectId!=='legacy')state.effects.nextAttackCloneBonus=0; state.shield=0; state.effects.shieldRage=false; state.effects.counterRage=false; drawCards(state,4); }
+  if(state.status==='playing') { state.turn++; state.energy=3; state.attacksPlayed=0; state.thunderTriggered=false; state.effects.nextAttackDiscount=0; state.effects.nextAttackBonus=0; if(state.sectId!=='legacy')state.effects.nextAttackCloneBonus=0; state.shield=0; state.effects.shieldRage=false; state.effects.counterRage=false; drawCards(state,4); log(state,`第${state.turn}回合 · 抽${state.hand.length}牌，灵力重置为3`); }
   return state;
 }
